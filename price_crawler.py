@@ -4,11 +4,14 @@ import requests as rq
 from dotenv import load_dotenv
 from datetime import datetime as dt
 from datetime import timedelta as td
+from tqdm import tqdm
 from lib.Tools import TG
 TG = TG()
+
 import argparse as arg
 import os
 import time
+
 
 # ========DEFINE FUNCTION============
 def get_symbol_price(symbol, start, end, interval):
@@ -75,15 +78,28 @@ def to_db(token, symbol, date, temp):
         token_all_db.to_csv(db_path, index=False)
     
         # to date db
-        temp.to_csv(date_db_path, index=False)
+        # temp.to_csv(date_db_path, index=False)
         return True
     
     else:
         os.mkdir(folder_path)
-        os.mkdir(subfolder_path)
+        # os.mkdir(subfolder_path)
         temp.to_csv(db_path, index=False)
-        temp.to_csv(date_db_path, index=False)
+        # temp.to_csv(date_db_path, index=False)
     
+    
+def process_token(token, listing_symbol, start_date, end_date, args):
+    
+    message = TG().message_send()
+    
+    days = (end_date - start_date).days
+    for i in tqdm(range(days), unit='days', desc="Processing......."):
+        start = start_date + td(days=i)
+        end = start_date + td(days=i + 1)
+        temp = get_symbol_price(symbol=listing_symbol, start=start, end=end, interval=args.interval)
+        to_db(token=token, symbol=listing_symbol, date=start, temp=temp)
+        # print(f"{start} -- {listing_symbol}")
+        time.sleep(0.5)
 
 def main():
     parser = arg.ArgumentParser()
@@ -98,42 +114,29 @@ def main():
     token_list = os.getenv("TOKEN_LIST").split(",")
     david_chat_id = os.getenv("DAVID_TG_CHAT_ID")
     bot_api = os.getenv("ALERT_BOT_API_KEY")
-    
-    if args.token is None:  # not specify token, then renew all
-        
+
+    if args.token is None:  # if not specify token, then renew all
         for token in token_list:
-            if args.start is None and args.end is None:  # Get the price from the beginning
-                listing_date, listing_symbol = min(
-                    (get_symbol_listing_time(symbol), symbol) for symbol in [f"{token}USDT", f"{token}USDC"]
-                )
-                days = (dt.today() - listing_date).days
-                for i in range(days):
-                    start_date = listing_date + td(days=i)
-                    end_date = listing_date + td(days=i + 1)
-                    temp = get_symbol_price(symbol=listing_symbol,
-                                            start=start_date, end=end_date,
-                                            interval=args.interval)
-                    to_db(token=token, symbol=listing_symbol, date=start_date, temp=temp)
-                    print(f"{start_date} -- {listing_symbol}")
-                    time.sleep(2)
-            time.sleep(10)
-    else:
-        token = args.token
-        if args.start is None and args.end is None:  # Get the price from the beginning
             listing_date, listing_symbol = min(
                 (get_symbol_listing_time(symbol), symbol) for symbol in [f"{token}USDT", f"{token}USDC"]
             )
-            days = (dt.today() - listing_date).days
-            for i in range(days):
-                start_date = listing_date + td(days=i)
-                end_date = listing_date + td(days=i + 1)
-                temp = get_symbol_price(symbol=listing_symbol,
-                                        start=start_date, end=end_date,
-                                        interval=args.interval)
-                to_db(token=token, symbol=listing_symbol, date=start_date, temp=temp)
-                print(f"{start_date} -- {listing_symbol}")
-                time.sleep(2)
         
+            start_date = listing_date if args.start is None else dt.strptime(args.start, "%Y%m%d")
+            end_date = dt.today() if args.end is None else dt.strptime(args.end, "%Y%m%d")
+        
+            process_token(token, listing_symbol, start_date, end_date, args)
+            time.sleep(10)
+    else:
+        token = args.token
+        listing_date, listing_symbol = min(
+            (get_symbol_listing_time(symbol), symbol) for symbol in [f"{token}USDT", f"{token}USDC"]
+        )
     
+        start_date = listing_date if args.start is None else dt.strptime(args.start, "%Y%m%d")
+        end_date = dt.today() if args.end is None else dt.strptime(args.end, "%Y%m%d")
+    
+        process_token(token, listing_symbol, start_date, end_date, args)
+
+
 if __name__ == "__main__":
     main()
