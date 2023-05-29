@@ -13,7 +13,7 @@ import time
 # ========DEFINE FUNCTION============
 def get_symbol_price(symbol, start, end, interval):
     if interval == "1m":
-        pass
+        return
     
     url = 'https://api.binance.com/api/v3/uiKlines'
     start_timestamp = int(start.timestamp() * 1000)
