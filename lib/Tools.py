@@ -146,7 +146,7 @@ class TG():
     def __int__(self):
         pass
 
-    def message_sent(self, bot_api, chat_id, text="default", parse_mode="HTML"):
+    def message_send(self, bot_api, chat_id, text="default", parse_mode="HTML"):
         url = f"https://api.telegram.org/bot{bot_api}/sendMessage?chat_id={chat_id}&" \
               f"text={text}&parse_mode={parse_mode}"
 

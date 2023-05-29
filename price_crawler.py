@@ -89,8 +89,9 @@ def to_db(token, symbol, date, temp):
     
     
 def process_token(token, listing_symbol, start_date, end_date, args):
+    david_chat_id = os.getenv("DAVID_TG_CHAT_ID")
+    bot_api = os.getenv("ALERT_BOT_API_KEY")
     
-    message = TG().message_send()
     
     days = (end_date - start_date).days
     for i in tqdm(range(days), unit='days', desc="Processing......."):
@@ -112,8 +113,7 @@ def main():
     # =========READ ENVIRONMENT VARIABLE======
     load_dotenv()
     token_list = os.getenv("TOKEN_LIST").split(",")
-    david_chat_id = os.getenv("DAVID_TG_CHAT_ID")
-    bot_api = os.getenv("ALERT_BOT_API_KEY")
+    
 
     if args.token is None:  # if not specify token, then renew all
         for token in token_list:
