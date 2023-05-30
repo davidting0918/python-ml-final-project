@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 from datetime import datetime as dt
 from datetime import timedelta as td
 from tqdm import tqdm
-from lib.Tools import TG
+from lib.Tools import TG, Formatter
 TG = TG()
+Formatter = Formatter()
 
 import argparse as arg
 import os
@@ -41,6 +42,7 @@ def get_symbol_price(symbol, start, end, interval):
 
     return temp
 
+
 def get_symbol_listing_time(symbol):
     url = 'https://api.binance.com/api/v3/uiKlines'
     start_timestamp = int(dt(year=2000, month=1, day=1, hour=0, minute=0, second=0).timestamp() * 1000)
@@ -64,43 +66,31 @@ def get_symbol_listing_time(symbol):
 def to_db(token, symbol, date, temp):
     # to token specific all db, remember to drop duplicated date.
     # make sure there is sub-folder in the db, if not create one.
-    folder_path = f"db/{token}"
-    subfolder_path = f"db/{token}/sub"
     
-    db_path = f"{folder_path}/{symbol}.csv"
-    date_db_path = f"{subfolder_path}/{symbol}_{date.strftime('%Y%m%d')}.csv"
+    db_path = f"db/token-price/{symbol}.csv"
     
-    if os.path.exists(folder_path):
+    if os.path.exists(db_path):
         # get all database
         token_all_db = pd.read_csv(db_path, index_col=None)
         token_all_db = pd.concat([token_all_db, temp], axis=0)
         token_all_db.drop_duplicates(inplace=True, subset=['open_time', "close_time"])
         token_all_db.to_csv(db_path, index=False)
     
-        # to date db
-        # temp.to_csv(date_db_path, index=False)
-        return True
-    
     else:
-        os.mkdir(folder_path)
-        # os.mkdir(subfolder_path)
         temp.to_csv(db_path, index=False)
-        # temp.to_csv(date_db_path, index=False)
     
     
 def process_token(token, listing_symbol, start_date, end_date, args):
-    david_chat_id = os.getenv("DAVID_TG_CHAT_ID")
-    bot_api = os.getenv("ALERT_BOT_API_KEY")
-    
     
     days = (end_date - start_date).days
-    for i in tqdm(range(days), unit='days', desc="Processing......."):
+    for i in tqdm(range(days), unit='days', desc=f"{token}_Processing......."):
         start = start_date + td(days=i)
         end = start_date + td(days=i + 1)
         temp = get_symbol_price(symbol=listing_symbol, start=start, end=end, interval=args.interval)
         to_db(token=token, symbol=listing_symbol, date=start, temp=temp)
         # print(f"{start} -- {listing_symbol}")
-        time.sleep(0.5)
+        # time.sleep(0.5)
+
 
 def main():
     parser = arg.ArgumentParser()
@@ -113,7 +103,6 @@ def main():
     # =========READ ENVIRONMENT VARIABLE======
     load_dotenv()
     token_list = os.getenv("TOKEN_LIST").split(",")
-    
 
     if args.token is None:  # if not specify token, then renew all
         for token in token_list:

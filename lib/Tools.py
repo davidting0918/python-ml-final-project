@@ -14,7 +14,7 @@ import prettytable as pt
 
 
 # =========DEFINE CLASS=========
-class formatter():
+class Formatter():
     def __int__(self):
         pass
 
