@@ -1,6 +1,7 @@
 import os
 import requests as rq
 from datetime import datetime as dt
+from datetime import timedelta as td
 import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,7 +12,6 @@ def get_price(symbol, start, end):
     url = 'https://api.binance.com/api/v3/uiKlines'
     start_timestamp = int(start.timestamp() * 1000)
     end_timestamp = int(end.timestamp() * 1000)
-    print(start_timestamp, end_timestamp)
     
     params = {
         'symbol': symbol,
@@ -37,7 +37,7 @@ def get_newest_date(token):
     file_list = os.listdir("db/token-price")
     file_name = [i for i in file_list if token in i][0]
     data_path = f"db/token-price/{file_name}"
-    newest_time = pd.to_datetime(pd.read_csv(data_path, index_col=[0]).index).tolist()[-1]
+    newest_time = pd.to_datetime(pd.read_csv(data_path, index_col=[0]).index).tolist()[-1] - td(hours=8)
     return newest_time
 
 
@@ -51,20 +51,26 @@ def get_symbol(token):
 def to_db(symbol, temp):
     db_path = f"db/token-price/{symbol}.csv"
     token_db = pd.read_csv(db_path, index_col=None)
+    
+    old_db_len = len(token_db)
     token_db = pd.concat([token_db, temp], axis=0)
-    token_db.drop_duplicates(inplace=True, subset=['open_time', "close_time"])
+    token_db = token_db.drop_duplicates(subset=['open_time', "close_time"])
+    new_db_len = len(token_db)
+    
     token_db.to_csv(db_path, index=False)
-    return len(temp)
+    
+    return new_db_len - old_db_len
     
 
 def main():
     token_list = os.getenv("TOKEN_LIST").split(",")
     
     for token in token_list:
+        if token == "ETH":
+            continue
         symbol = get_symbol(token)
         newest_time = get_newest_date(token)
         end = dt.now()
-        print(newest_time, end)
         temp = get_price(symbol=symbol, start=newest_time, end=end)
         updated_num = to_db(symbol=symbol, temp=temp)
         print(f"Token:{token} Updated_num:{updated_num}\n\n")
