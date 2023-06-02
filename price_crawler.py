@@ -89,7 +89,7 @@ def process_token(token, listing_symbol, start_date, end_date, args):
         temp = get_symbol_price(symbol=listing_symbol, start=start, end=end, interval=args.interval)
         to_db(token=token, symbol=listing_symbol, date=start, temp=temp)
         # print(f"{start} -- {listing_symbol}")
-        # time.sleep(0.5)
+        time.sleep(0.1)
 
 
 def main():
@@ -111,18 +111,21 @@ def main():
             )
         
             start_date = listing_date if args.start is None else dt.strptime(args.start, "%Y%m%d")
-            end_date = dt.today() if args.end is None else dt.strptime(args.end, "%Y%m%d")
+            end_date = dt.now() if args.end is None else dt.strptime(args.end, "%Y%m%d")
         
             process_token(token, listing_symbol, start_date, end_date, args)
             time.sleep(10)
     else:
         token = args.token
-        listing_date, listing_symbol = min(
-            (get_symbol_listing_time(symbol), symbol) for symbol in [f"{token}USDT", f"{token}USDC"]
-        )
+        if token == "DOGE":
+            listing_symbol = "DOGEUSDT"  # DOGE don't have USDC pair for now
+        else:
+            listing_date, listing_symbol = min(
+                (get_symbol_listing_time(symbol), symbol) for symbol in [f"{token}USDT", f"{token}USDC"]
+            )
     
         start_date = listing_date if args.start is None else dt.strptime(args.start, "%Y%m%d")
-        end_date = dt.today() if args.end is None else dt.strptime(args.end, "%Y%m%d")
+        end_date = dt.now() if args.end is None else dt.strptime(args.end, "%Y%m%d")
     
         process_token(token, listing_symbol, start_date, end_date, args)
 
