@@ -8,8 +8,8 @@ import argparse as arg
 load_dotenv()
 
 
-def get_price(symbol, start, end):
-    interval = "15m"
+def get_price(symbol, start, end, interval="15m", limit=1000):
+    
     url = 'https://api.binance.com/api/v3/uiKlines'
     start_timestamp = int(start.timestamp() * 1000)
     end_timestamp = int(end.timestamp() * 1000)
@@ -17,7 +17,7 @@ def get_price(symbol, start, end):
     params = {
         'symbol': symbol,
         'interval': interval,
-        'limit': 1000,
+        'limit': limit,
         'startTime': start_timestamp,
         "endTime": end_timestamp
     }

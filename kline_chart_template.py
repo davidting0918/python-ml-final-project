@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from bokeh.plotting import curdoc, figure
-from bokeh.models import ColumnDataSource, RangeTool, DatetimeTickFormatter, CDSView, BooleanFilter, Range1d
+from bokeh.models import ColumnDataSource, RangeTool, DatetimeTickFormatter, CDSView, BooleanFilter, Range1d, Label
 from bokeh.layouts import column, row
 from bokeh.models import Select, HoverTool
 from datetime import datetime as dt
@@ -10,10 +10,11 @@ from bokeh.layouts import gridplot
 import os
 from dotenv import load_dotenv
 import warnings
+from renew_price import get_price, get_symbol
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-# os.system("python3 renew_price.py --action update")
+os.system("python3 renew_price.py --action update")
 # os.system("python3 price_cleaner.py")
 
 timedelta_lookup_table = {
@@ -58,11 +59,18 @@ x_range_end_index_cur = -1
 
 # Create the Bokeh figure
 p = figure(x_axis_type='datetime', title='K-Line Plot', height=800, width=1500, x_range=(price_data.index[x_range_start_index_cur], price_data.index[x_range_end_index_cur]))
+current_price_label = Label(name='current_price_label',
+                            background_fill_color='lightgray',
+                            background_fill_alpha=1,
+                            border_line_width=1,
+                            text_font_size='15pt')
+p.add_layout(current_price_label)
 datetime_formatter = DatetimeTickFormatter(
     days=["%Y/%m/%d"],
     months=["%Y/%m/%d"],
     hours=["%Y/%m/%d %H:%M"],
-    minutes=["%Y/%m/%d %H:%M"])
+    minutes=["%Y/%m/%d %H:%M"]
+)
 
 p.xaxis.formatter = datetime_formatter
 p.grid.grid_line_alpha = 0.3
@@ -102,7 +110,7 @@ def update_x_range_callback(attr, old, new):
     print(f"Start: {x_start}, End: {x_end}, Newest: {newest_date_in_source_data}")
     
     new_price_data = raw_price_data.loc[(raw_price_data.index > x_start) & (raw_price_data.index < x_end)]
-    new_y_range_start = new_price_data["L"].min() * 0.995
+    new_y_range_start = new_price_data["L"].min() * 0.999
     new_y_range_end = new_price_data["H"].max() * 1.001
     
     p.y_range.start = new_y_range_start
@@ -227,9 +235,42 @@ def update_token_callback(attr, old, new):
     p.y_range.reset_end = new_y_range_end
     
     
-def price_tracker_callback():
-    global p, token_select
+def continuous_price_tracker_callback(first=False):
+    global p, token_select, source, current_price_label
+    symbol = get_symbol(token=token_select.value)
+    start = dt.now() - td(minutes=1)
+    end = dt.now()
+    temp = get_price(symbol=symbol, start=start, end=end, interval='1s', limit=1)
+    current_price = temp.C.values[0]
+    source_df = pd.DataFrame(source.data)
+    source_df['current_price'] = current_price
+    print(current_price)
     
+    label_index = -9
+    if first:
+        p.line(x='open_time', y='current_price', color="green", width=3, name="current_price", source=ColumnDataSource(source_df))
+        current_price_label.x = source_df['open_time'].values[label_index]
+        current_price_label.y = current_price
+        current_price_label.text = f"{token_select.value}: {current_price}"
+        current_price_label.text_color = "green"
+        return
+    else:
+        last_price = float(current_price_label.text.split(":")[-1].strip())
+        for index, renderer in enumerate(p.renderers):
+            if renderer.name == 'current_price':
+                if last_price < current_price:
+                    renderer.glyph.line_color = "green"
+                    current_price_label.text_color = "green"
+                    current_price_label.border_line_color = 'green'
+                else:
+                    renderer.glyph.line_color = 'red'
+                    current_price_label.text_color = "red"
+                    current_price_label.border_line_color = 'red'
+                renderer.data_source.data = dict(source_df)
+                current_price_label.x = source_df['open_time'].values[label_index]
+                current_price_label.y = current_price
+                current_price_label.text = f"{token_select.value}: {current_price}"
+
 
 time_select.on_change("value", update_time_unit_callback)
 token_select.on_change('value', update_token_callback)
@@ -248,5 +289,6 @@ p.add_tools(hover_tool)
 
 # Create the layout and add it to the current document
 layout = column(row(time_select, token_select), p)
-
+continuous_price_tracker_callback(first=True)
+curdoc().add_periodic_callback(continuous_price_tracker_callback, 2000)
 curdoc().add_root(layout)
