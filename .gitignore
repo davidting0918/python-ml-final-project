@@ -4,3 +4,6 @@
 .DS_Store
 __pycache__
 .ipynb
+test.py
+db/icon
+test_Env.ipynb
