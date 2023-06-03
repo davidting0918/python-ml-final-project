@@ -1,7 +1,8 @@
+"""bokeh serve --show kline_chart_template.py"""
 import numpy as np
 import pandas as pd
 from bokeh.plotting import curdoc, figure
-from bokeh.models import ColumnDataSource, RangeTool, DatetimeTickFormatter, CDSView, BooleanFilter, Range1d, Label
+from bokeh.models import ColumnDataSource, RangeTool, DatetimeTickFormatter, CDSView, BooleanFilter, Range1d, Label, BoxSelectTool
 from bokeh.layouts import column, row
 from bokeh.models import Select, HoverTool
 from datetime import datetime as dt
@@ -14,7 +15,7 @@ from renew_price import get_price, get_symbol
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-os.system("python3 renew_price.py --action update")
+# os.system("python3 renew_price.py --action update")
 # os.system("python3 price_cleaner.py")
 
 timedelta_lookup_table = {
@@ -51,7 +52,7 @@ x_range_start_index_cur = -50
 x_range_end_index_cur = -1
 
 # Create the Bokeh figure
-kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=800, width=1500,
+kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=500, width=1000,
                  x_range=(price_data.index[x_range_start_index_cur], price_data.index[x_range_end_index_cur]),
                  y_range=Range1d())
 current_price_label = Label(name='current_price_label',
@@ -260,6 +261,10 @@ def continuous_price_tracker_callback(first=False):
                 current_price_label.text = f"{token_select.value}: {current_price}"
 
 
+def update_price_and_replot():
+    os.system("python3 renew_price.py --action update")
+    update_token_callback(None, None, None)
+
 time_select.on_change("value", update_time_unit_callback)
 token_select.on_change('value', update_token_callback)
 kline_p.x_range.on_change("start", update_x_range_callback)
@@ -267,10 +272,10 @@ kline_p.x_range.on_change("start", update_x_range_callback)
 # Add tooltips to the plot
 hover_tool = HoverTool(tooltips=[
     ("Date", "@open_time{%Y/%m/%d %H:%M}"),
-    ("Open", "@O{0,0.4f}"),
-    ("High", "@H{0,0.4f}"),
-    ("Low", "@L{0,0.4f}"),
-    ("Close", "@C{0,0.4f}"),
+    ("Open", "@O{0,0.0000}"),
+    ("High", "@H{0,0.0000}"),
+    ("Low", "@L{0,0.0000}"),
+    ("Close", "@C{0,0.0000}"),
     ("Volume", "@V_Q{0.00 a}")
 ], formatters={"@open_time": "datetime"}, )
 kline_p.add_tools(hover_tool)
@@ -282,4 +287,5 @@ update_token_callback(None, None, None)
 continuous_price_tracker_callback(first=True)
 
 curdoc().add_periodic_callback(continuous_price_tracker_callback, 2000)
+curdoc().add_periodic_callback(update_price_and_replot, 1000*60*15)
 curdoc().add_root(layout)
