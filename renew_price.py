@@ -64,7 +64,7 @@ def get_newest_date_in_db(token):
     file_list = os.listdir("db/token-price")
     file_name = [i for i in file_list if token in i][0]
     data_path = f"db/token-price/{file_name}"
-    newest_time = pd.to_datetime(pd.read_csv(data_path, index_col=None)['close_time']).tolist()[-1] - td(hours=8)
+    newest_time = pd.to_datetime(pd.read_csv(data_path, index_col=None)['open_time']).tolist()[-1] - td(hours=8)
     return newest_time
 
 
@@ -81,11 +81,11 @@ def to_db(symbol, temp):
     
     old_db_len = len(token_db)
     token_db = pd.concat([token_db, temp], axis=0)
-    token_db = token_db.drop_duplicates(subset=['open_time', "close_time"])
-    new_db_len = len(token_db)
-    
     token_db['open_time'] = pd.to_datetime(token_db['open_time'])
-    token_db.sort_values(by='open_time', ascending=True, inplace=True)
+    token_db['close_time'] = pd.to_datetime(token_db['close_time'])
+    
+    token_db = token_db.drop_duplicates(subset=['open_time', "close_time"], keep='last')
+    new_db_len = len(token_db)
     
     token_db.to_csv(db_path, index=False)
     
@@ -108,6 +108,15 @@ def main():
             temp = get_price(symbol=symbol, start=newest_time, end=end)
             updated_num = to_db(symbol=symbol, temp=temp)
             print(f"Token:{token} Updated_num:{updated_num}")
+            
+    elif args.action == 'update':
+        token = args.token
+        symbol = get_symbol(token)
+        newest_time = get_newest_date_in_db(token)
+        end = dt.now()
+        temp = get_price(symbol=symbol, start=newest_time, end=end)
+        updated_num = to_db(symbol=symbol, temp=temp)
+        print(f"Token:{token} Updated_num:{updated_num}")
     
     if args.token is None and args.action == "fill":
         pass
