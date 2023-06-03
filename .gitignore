@@ -4,6 +4,7 @@
 .DS_Store
 __pycache__
 .ipynb
+venv*
 frontend/test.py
 frontend/db/icon
 frontend/test_Env.ipynb
