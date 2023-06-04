@@ -243,9 +243,11 @@ def create_kline_chart():
 
     x_range_start_index_cur = -50
     x_range_end_index_cur = -1
-    kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=500, width=700,
+    kline_p_title = """(1.) Price Chart\nPrice of the 10 crypto currencies."""
+    kline_p = figure(x_axis_type='datetime', height=500, width=700,
                      x_range=(price_data.index[x_range_start_index_cur], price_data.index[x_range_end_index_cur]),
-                     y_range=Range1d())
+                     y_range=Range1d(),
+                     title=kline_p_title)
     current_price_label = Label(name='current_price_label',
                                 background_fill_color='lightgray',
                                 background_fill_alpha=1,
@@ -290,34 +292,32 @@ def create_kline_chart():
 def create_historical_sentiment_chart():
     global datetime_formatter, historical_sentiment_p, hsp_source
     
-    data_path = os.path.join(wd, "db/ml_sentiment_score.csv")
-    raw_data = pd.read_csv(data_path, index_col=[0]).astype(float)
+    data_path = os.path.join(wd, "db/cvi.csv")
+    raw_data = pd.read_csv(data_path, index_col=[0]).astype(float)/100
     raw_data.index = pd.to_datetime(raw_data.index)
-    raw_data['3ma'] = raw_data['score'].rolling(3).mean()
-    raw_data['10ma'] = raw_data['score'].rolling(10).mean()
+    raw_data.sort_index(ascending=True, inplace=True)
     
-    hsp_x_range_start_plot = -30
+    hsp_x_range_start_plot = -150
     hsp_x_range_end_plot = -1
     hsp_source = ColumnDataSource(raw_data)
     
+    historical_sentiment_p_title = "(2.) CVI Chart\nThe trend and prediction of CVI (Crypto Volatility Index)."
     historical_sentiment_p = figure(width=700, height=500, x_axis_type='datetime',
                                     y_range=Range1d(),
                                     x_range=(
-                                    raw_data.index[hsp_x_range_start_plot], raw_data.index[hsp_x_range_end_plot]))
-    historical_sentiment_p.line(x='DATE', y='score', width=1.5, color='darkblue', source=hsp_source,
-                                name="sentiment score", legend_label='sentiment score')
-    historical_sentiment_p.line(x='DATE', y='3ma', width=1.5, color='red', source=hsp_source, alpha=0.6, name="3ma",
-                                legend_label='3days moving average')
-    historical_sentiment_p.line(x='DATE', y='10ma', width=1.5, color='green', source=hsp_source, alpha=0.6, name="10ma",
-                                legend_label='10days moving average')
+                                    raw_data.index[hsp_x_range_start_plot], raw_data.index[hsp_x_range_end_plot]),
+                                    title=historical_sentiment_p_title)
+    historical_sentiment_p.line(x='DATE', y='actual', width=1.5, color='darkblue', source=hsp_source,
+                                name="Actual CVI", legend_label='Actual CVI')
+    historical_sentiment_p.line(x='DATE', y='prediction', width=1.5, color='darkgreen', source=hsp_source, alpha=0.6, name="prediction",
+                                legend_label='Predicted CVI')
     
     historical_sentiment_p.xaxis.formatter = datetime_formatter
-    historical_sentiment_p.yaxis.formatter = NumeralTickFormatter(format="0.00")
+    historical_sentiment_p.yaxis.formatter = NumeralTickFormatter(format="0.0%")
     hover_tool = HoverTool(tooltips=[
         ("Date", "@DATE{%Y/%m/%d}"),
-        ("Sentiment Score", "@score{0,0.000}"),
-        ("3days moving average", "@3ma{0,0.000}"),
-        ("10days moving average", "@10ma{0,0.000}"),
+        ("Predicted CVI", "@prediction{0,0.00%}"),
+        ("Actual CVI", "@actual{0,0.00%}"),
     ], formatters={"@DATE": "datetime"}, )
     historical_sentiment_p.add_tools(hover_tool)
     historical_sentiment_p.legend.location = "bottom_right"
@@ -342,11 +342,11 @@ def update_hsp_range_callback(attr, old, new):
         x_start = dt.fromtimestamp(int(x_start) / 1000) - td(hours=8)
     
     source_df = source_df.loc[(source_df.index > x_start) & (source_df.index < x_end)]
-    min_value = source_df[['score', '3ma', '10ma']].min().min()
-    max_value = source_df[["score", '3ma', '10ma']].max().max()
+    min_value = source_df.min().min()
+    max_value = source_df.max().max()
     
-    new_y_range_start = min_value * 0.1 if min_value > 0 else min_value * 2
-    new_y_range_end = max_value * 0.1 if max_value < 0 else max_value * 2
+    new_y_range_start = min_value * 0.5 if min_value > 0 else min_value * 1.2
+    new_y_range_end = max_value * 0.5 if max_value < 0 else max_value * 1.2
     
     historical_sentiment_p.y_range.start = new_y_range_start
     historical_sentiment_p.y_range.end = new_y_range_end
@@ -362,16 +362,36 @@ def create_needle_chart():
     inner = 0.6
     outter = 1
     
+    needle_p_title = """(4.) Sentiment Score\nWhat is the sentiment score in the past 24 hours?"""
     needle_p = figure(width=700, height=400, x_range=(-1.5 * outter, 1.5 * outter), y_range=(-1, 3),
-                      background_fill_color=None, border_fill_color=None, toolbar_location=None, tools="")
+                      background_fill_color=None, border_fill_color=None, toolbar_location=None, tools="",
+                      title=needle_p_title)
     sentiment_score_label = Label(x=0,
-                                  y=-0.3,
+                                  y=-0.8,
                                   name='sentiment_score_label',
                                   text_align='center',
                                   background_fill_alpha=1,
                                   border_line_width=1,
-                                  text_font_size='30pt')
+                                  text_font_size='20pt')
+    start_label = Label(x=-0.8,
+                        y=-0.35,
+                        name='start_label',
+                        text_align='center',
+                        background_fill_alpha=1,
+                        border_line_width=1,
+                        text_font_size='20pt',
+                        text="Min : -1")
+    end_label = Label(x=0.8,
+                      y=-0.35,
+                      name='start_label',
+                      text_align='center',
+                      background_fill_alpha=1,
+                      border_line_width=1,
+                      text_font_size='20pt',
+                      text="Max : 1")
     needle_p.add_layout(sentiment_score_label)
+    needle_p.add_layout(start_label)
+    needle_p.add_layout(end_label)
     
     needle_p.axis.visible = False
     needle_p.xaxis.visible = False
@@ -398,17 +418,17 @@ def create_needle_chart():
     pointer_end_x = pointer_length * math.cos(math.radians(pointer_angle))
     pointer_end_y = pointer_length * math.sin(math.radians(pointer_angle))
     
-    pointer_x_2 = pointer_length * 0.2 * math.cos(math.radians(pointer_angle + 15))
-    pointer_x_3 = pointer_length * 0.2 * math.cos(math.radians(pointer_angle - 15))
+    pointer_x_2 = pointer_length * 0.2 * math.cos(math.radians(pointer_angle + 10))
+    pointer_x_3 = pointer_length * 0.2 * math.cos(math.radians(pointer_angle - 10))
     
-    pointer_y_2 = pointer_length * 0.2 * math.sin(math.radians(pointer_angle + 15))
-    pointer_y_3 = pointer_length * 0.2 * math.sin(math.radians(pointer_angle - 15))
+    pointer_y_2 = pointer_length * 0.2 * math.sin(math.radians(pointer_angle + 10))
+    pointer_y_3 = pointer_length * 0.2 * math.sin(math.radians(pointer_angle - 10))
     
     x = [0, pointer_x_2, pointer_end_x, pointer_x_3]
     y = [0, pointer_y_2, pointer_end_y, pointer_y_3]
     
     needle_p.patch(x, y, color='black', alpha=1)
-    sentiment_score_label.text = str(round(sentiment_score, 4))
+    sentiment_score_label.text = f"{round(sentiment_score, 4)}\nDate: {raw_data.index[0]}"
     
     
 def create_word_cloud_chart():
@@ -422,8 +442,10 @@ def create_word_cloud_chart():
     
     img, xdim, ydim, dim = create_rgba_from_file(path=png_file_path)
     
+    word_cloud_title = '''(3.) Wordcloud\nWhat are the keywords that appear on Twitter most frequently in the past 24 hours?'''
     word_cloud_p = figure(width=700, height=400, x_range=(0, 1), y_range=(0, ydim/xdim),
-                          background_fill_color=None, border_fill_color=None, toolbar_location=None, tools="")
+                          background_fill_color=None, border_fill_color=None, toolbar_location=None, tools="",
+                          title=word_cloud_title)
     word_cloud_p.image_rgba(image=[img], x=0, y=0, dw=1, dh=ydim / xdim, alpha=1, level='overlay', name="word_cloud")
     
     word_cloud_p.axis.visible = False
@@ -453,5 +475,5 @@ create_word_cloud_chart()
 curdoc().add_periodic_callback(continuous_price_tracker_callback, 1000)
 curdoc().add_periodic_callback(update_price_and_replot, 1000*60*15)
 
-layout = row(column(row(word_cloud_p, needle_p), row(time_select, token_select), row(kline_p, historical_sentiment_p)))
+layout = column(row(time_select, token_select), row(kline_p, historical_sentiment_p), row(word_cloud_p, needle_p))
 curdoc().add_root(layout)
