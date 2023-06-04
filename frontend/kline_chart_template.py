@@ -51,12 +51,12 @@ raw_price_data = pd.read_csv(data_path, index_col=[0])
 raw_price_data.index = pd.to_datetime(raw_price_data.index)
 price_data = raw_price_data.iloc[x_range_start_index:]
 
-x_range_start_index_cur = -50
-x_range_end_index_cur = -1
+x_range_start_index_plot = -50
+x_range_end_index_plot = -1
 
 # Create the Bokeh figure
 kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=500, width=900,
-                 x_range=(price_data.index[x_range_start_index_cur], price_data.index[x_range_end_index_cur]),
+                 x_range=(price_data.index[x_range_start_index_plot], price_data.index[x_range_end_index_plot]),
                  y_range=Range1d())
 current_price_label = Label(name='current_price_label',
                             background_fill_color='lightgray',
@@ -162,11 +162,11 @@ def update_time_unit_callback(attr, old, new):
     kline_p.vbar(source=source, view=dec_cds, x='open_time', width=timeunit_width_lookup_table[time_select.value], top='O', bottom='C', fill_color="#F2583E",
                  line_color="red", name='dec')
 
-    new_y_range_start = price_data.iloc[x_range_start_index_cur:]["L"].min() * 0.995
-    new_y_range_end = price_data.iloc[x_range_start_index_cur:]["H"].max() * 1.001
+    new_y_range_start = price_data.iloc[x_range_start_index_plot:]["L"].min() * 0.995
+    new_y_range_end = price_data.iloc[x_range_start_index_plot:]["H"].max() * 1.001
     
-    new_x_range_start = price_data.iloc[x_range_start_index_cur:].index.tolist()[0] - timedelta_lookup_table[time_select.value]
-    new_x_range_end = price_data.iloc[x_range_start_index_cur:].index.tolist()[-1] + timedelta_lookup_table[time_select.value]
+    new_x_range_start = price_data.iloc[x_range_start_index_plot:].index.tolist()[0] - timedelta_lookup_table[time_select.value]
+    new_x_range_end = price_data.iloc[x_range_start_index_plot:].index.tolist()[-1] + timedelta_lookup_table[time_select.value]
     
     kline_p.y_range.start = new_y_range_start
     kline_p.y_range.end = new_y_range_end
@@ -180,7 +180,6 @@ def update_time_unit_callback(attr, old, new):
 
 
 def update_token_callback(attr, old, new):
-    """Need to update time unit"""
     global source, raw_price_data, price_data, kline_p
     
     new_renderers_list = []
@@ -218,8 +217,8 @@ def update_token_callback(attr, old, new):
     kline_p.vbar(source=source, view=dec_cds, x='open_time', width=timeunit_width_lookup_table[time_select.value], top='O', bottom='C', fill_color="#F2583E",
                  line_color="red", name='dec')
 
-    new_y_range_start = price_data.iloc[x_range_start_index_cur: x_range_end_index_cur]["L"].min() * 0.995
-    new_y_range_end = price_data.iloc[x_range_start_index_cur: x_range_end_index_cur]["H"].max() * 1.001
+    new_y_range_start = price_data.iloc[x_range_start_index_plot: x_range_end_index_plot]["L"].min() * 0.995
+    new_y_range_end = price_data.iloc[x_range_start_index_plot: x_range_end_index_plot]["H"].max() * 1.001
     
     kline_p.y_range.start = new_y_range_start
     kline_p.y_range.end = new_y_range_end
