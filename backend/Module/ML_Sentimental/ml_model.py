@@ -4,6 +4,8 @@ from sklearn.neighbors import KNeighborsRegressor
 import numpy as np
 import pandas as pd
 from nltk.sentiment import SentimentIntensityAnalyzer
+import nltk
+nltk.download('vader_lexicon')
 from sklearn.metrics import mean_squared_error, r2_score
 
 # 放入twitter的csv以及cvi的csv檔即可，會回傳model
