@@ -17,6 +17,9 @@ load_dotenv()
 
 # os.system("python3 renew_price.py --action update")
 # os.system("python3 price_cleaner.py")
+file_path = os.path.abspath(__file__)
+directory = os.path.dirname(file_path)
+os.chdir(directory)
 
 timedelta_lookup_table = {
     "15min": td(minutes=15),
@@ -52,7 +55,7 @@ x_range_start_index_cur = -50
 x_range_end_index_cur = -1
 
 # Create the Bokeh figure
-kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=500, width=1000,
+kline_p = figure(x_axis_type='datetime', title='K-Line Plot', height=500, width=900,
                  x_range=(price_data.index[x_range_start_index_cur], price_data.index[x_range_end_index_cur]),
                  y_range=Range1d())
 current_price_label = Label(name='current_price_label',
@@ -226,6 +229,7 @@ def update_token_callback(attr, old, new):
     
 def continuous_price_tracker_callback(first=False):
     global kline_p, token_select, source, current_price_label
+    os.chdir(directory)
     symbol = get_symbol(token=token_select.value)
     start = dt.now() - td(minutes=1)
     end = dt.now()
